@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using PlanteAPI.Models;
+using PlanteAPI.Services;
 using System.Web.Http.Cors;
 
 namespace PlanteAPI.Controllers
@@ -12,10 +13,12 @@ namespace PlanteAPI.Controllers
     {
 
         private readonly PlanteApiContext _context;
+        readonly IBufferedFileUploadService _bufferedFileUploadService;
 
-        public PlantesController(PlanteApiContext context)
+        public PlantesController(PlanteApiContext context, IBufferedFileUploadService buffer)
         {
             _context = context;
+            _bufferedFileUploadService = buffer;
         }
        
         [HttpGet]
@@ -45,20 +48,24 @@ namespace PlanteAPI.Controllers
             return CreatedAtAction(nameof(CreatePlante), plante);
         }
 
-        [HttpPut("{id}")]
-        public async Task<ActionResult<Plante>> UpdatePlante(int id, Plante plante)
+        [HttpPut]
+        public async Task<ActionResult<Plante>> UpdatePlante( Plante plante)
         {
             //trouver la plante
-            var planteUpdate = await _context.Plantes.Where(p => p.Id.Equals(id)).FirstOrDefaultAsync();
+            var planteUpdate = await _context.Plantes.Where(p => p.Id.Equals(plante.Id)).FirstOrDefaultAsync();
             if (planteUpdate == null)
             {
                 return NotFound();
 
             }
-            plante.Name = planteUpdate.Name;
+            planteUpdate.Name = plante.Name;
+            planteUpdate.Description = plante.Description;
+            planteUpdate.date = DateTime.Now;
+            planteUpdate.Picture = plante.Picture;
 
+            _context.Plantes.Update(planteUpdate);
             await _context.SaveChangesAsync();
-            return NoContent();
+            return planteUpdate;
         }
 
         [HttpDelete("{id}")]
